@@ -13,8 +13,21 @@ app.get('/', function (req, res) {
 	res.send('Todo API root');
 });
 
+// GET /todos/:id
 app.get('/todos', function (req, res) {
-	res.json(todos);
+	var queryParams = req.query;
+	var filteredTodos = todos;
+
+	// if has property && completed === 'true'
+	if (queryParams.hasOwnProperty('completed')) {
+		if (queryParams.completed === 'true') {
+			filteredTodos = _.where(filteredTodos, {completed: true});
+		} else if (queryParams.completed === 'false') {
+			filteredTodos = _.where(filteredTodos, {completed: false});
+		}
+	}
+
+	res.json(filteredTodos);
 }); 
 
 app.get('/todos/:id', function (req, res) {
