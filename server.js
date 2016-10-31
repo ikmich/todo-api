@@ -45,27 +45,6 @@ app.get('/todos', function (req, res) {
 	}).catch(function (e) {
 		res.status(500).json({ "error": "Something went wrong: " + e.message });
 	});
-
-	// ======================================================
-	// var filteredTodos = todos;
-
-	// // if has property && completed === 'true'
-	// if (queryParams.hasOwnProperty('completed')) {
-	// 	if (queryParams.completed === 'true') {
-	// 		filteredTodos = _.where(filteredTodos, { completed: true });
-	// 	} else if (queryParams.completed === 'false') {
-	// 		filteredTodos = _.where(filteredTodos, { completed: false });
-	// 	}
-	// }
-
-	// if (queryParams.hasOwnProperty('q')
-	// 	&& queryParams.q.trim().length > 0) {
-	// 	filteredTodos = _.filter(filteredTodos, function (todo) {
-	// 		return todo.description.toLowerCase().indexOf(queryParams.q.toLowerCase()) > -1;
-	// 	});
-	// }
-
-	// res.json(filteredTodos);
 });
 
 // GET /todos/:id
