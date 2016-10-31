@@ -82,14 +82,21 @@ app.post('/todos', function (req, res) {
 // DELETE /todos/:id
 app.delete('/todos/:id', function (req, res) {
 	var todoId = parseInt(req.params.id, 10);
-	var matchedTodo = _.findWhere(todos, { id: todoId });
 
-	if (!matchedTodo) {
-		res.status(404).json({ "error": 'No such item found' });
-	} else {
-		todos = _.without(todos, matchedTodo);
-		res.json(matchedTodo);
-	}
+	db.todo.destroy({
+		where: {
+			id: todoId
+		}
+	}).then(function(n){
+		if (n > 0) {
+			res.send(n + " items deleted.");
+		} else {
+			res.status(404).json({"error": "No item with id " + todoId + " found."});
+			// res.status(204).send();
+		}
+	}).catch(function(e){
+		res.status(500).json({"error":"Something went wrong: " + e.message});
+	});
 });
 
 // PUT /todos/:id
@@ -107,7 +114,7 @@ app.put('/todos/:id', function (req, res) {
 	if (body.hasOwnProperty('completed') && _.isBoolean(body.completed)) {
 		validAttributes.completed = body.completed;
 	} else if (body.hasOwnProperty('completed')) {
-		// Bad . Hmm.
+		// Bad
 		return res.status(400).json({ "error": "Inavlid 'completed' property." });
 	} else {
 		// Never provided attribute. No problem here.
