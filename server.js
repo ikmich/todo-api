@@ -71,8 +71,8 @@ app.post('/todos', function (req, res) {
 		description: body.description.trim(),
 		completed: body.completed
 	}).then(function (todo) {
-		var result = _.pick(todo.toJSON(), 'description', 'completed');
-		res.json(result);
+		// var result = _.pick(todo.toJSON(), 'description', 'completed');
+		res.json(todo.toJSON());
 	}).catch(function (e) {
 		console.log(e.message);
 		res.status(400).json(e);
