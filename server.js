@@ -87,52 +87,52 @@ app.delete('/todos/:id', function (req, res) {
 		where: {
 			id: todoId
 		}
-	}).then(function(n){
+	}).then(function (n) {
 		if (n > 0) {
 			res.send(n + " items deleted.");
 		} else {
-			res.status(404).json({"error": "No item with id " + todoId + " found."});
+			res.status(404).json({ "error": "No item with id " + todoId + " found." });
 			// res.status(204).send();
 		}
-	}).catch(function(e){
-		res.status(500).json({"error":"Something went wrong: " + e.message});
+	}).catch(function (e) {
+		res.status(500).json({ "error": "Something went wrong: " + e.message });
 	});
 });
 
 // PUT /todos/:id
 app.put('/todos/:id', function (req, res) {
 	var todoId = parseInt(req.params.id, 10);
-	var matchedTodo = _.findWhere(todos, { id: todoId });
+	// var matchedTodo = _.findWhere(todos, { id: todoId });
 
-	if (!matchedTodo) {
-		return res.status(404).send();
-	}
+	// if (!matchedTodo) {
+	// 	return res.status(404).send();
+	// }
 
 	var body = _.pick(req.body, 'description', 'completed');
-	var validAttributes = {};
+	var attributes = {};
 
-	if (body.hasOwnProperty('completed') && _.isBoolean(body.completed)) {
-		validAttributes.completed = body.completed;
-	} else if (body.hasOwnProperty('completed')) {
-		// Bad
-		return res.status(400).json({ "error": "Inavlid 'completed' property." });
-	} else {
-		// Never provided attribute. No problem here.
+	if (body.hasOwnProperty('completed')) {
+		attributes.completed = body.completed;
 	}
 
-	if (body.hasOwnProperty('description') && _.isString(body.description) && body.description.trim().length > 0) {
+	if (body.hasOwnProperty('description')) {
 		// good
-		validAttributes.description = body.description;
-	} else if (body.hasOwnProperty('description')) {
-		// Bad
-		return res.status(400).json({ "error": "Invalid 'description' property" });
-	} else {
-		// no prob
+		attributes.description = body.description;
 	}
 
-	_.extend(matchedTodo, validAttributes);
-
-	res.json(matchedTodo);
+	db.todo.findById(todoId).then(function (todo) {
+		if (!!todo) {
+			todo.update(attributes).then(function (todo) {
+				res.json(todo.toJSON());
+			}, function (e) {
+				res.status(400).json(e);
+			});
+		} else {
+			res.status(404).json({ "error": "Not found" });
+		}
+	}, function () {
+		res.status(500).send();
+	});
 });
 
 db.sequelize.sync().then(function () {
