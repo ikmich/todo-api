@@ -5,6 +5,7 @@ var express = require('express');
 var bodyParser = require('body-parser');
 var _ = require('underscore');
 var db = require('./db.js');
+var bcrypt = require('bcrypt');
 
 var app = express();
 var PORT = process.env.PORT || 3000;
@@ -145,27 +146,38 @@ app.put('/todos/:id', function (req, res) {
 			res.status(404).json({ "error": "Not found" });
 		}
 	}, function (e) {
-		res.status(500).json({"error": "Something went wrong: " + e.message});
+		res.status(500).json({ "error": "Something went wrong: " + e.message });
 	});
 });
 
 // POST /users
-app.post('/users', function(req, res){
+app.post('/users', function (req, res) {
 	var body = _.pick(req.body, 'email', 'password');
 
 	// Use Sequelize to create a User in the db.
 	db.user.create({
 		email: body.email.trim(),
 		password: body.password
-	}).then(function(user){
+	}).then(function (user) {
 		res.json(user.toPublicJSON());
-	}).catch(function(e){
-		res.status(400).json({"errors": e.errors});
+	}).catch(function (e) {
+		res.status(400).json({ "errors": e.errors });
 		// res.status(400).json(e);
 	});
 });
 
-db.sequelize.sync().then(function () {
+// POST /users/login
+app.post('/users/login', function (req, res) {
+	var body = _.pick(req.body, "email", "password");
+
+	db.user.authenticate(body).then(function(user){
+		res.json(user.toPublicJSON());
+	}, function(e){
+		res.status(401).send();
+	});
+});
+
+db.sequelize.sync({force: true}).then(function () {
 	app.listen(PORT, function () {
 		console.log('Express listening on port ' + PORT + '!');
 	});
