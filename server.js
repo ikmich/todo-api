@@ -1,3 +1,6 @@
+/*
+ - Todo API.
+ */
 var express = require('express');
 var bodyParser = require('body-parser');
 var _ = require('underscore');
@@ -15,10 +18,13 @@ app.get('/', function (req, res) {
 	res.send('Todo API root');
 });
 
+// GET /todos
+// GET /todos/?q=<query>&completed=<true|false>
 app.get('/todos', function (req, res) {
 	var query = req.query;
 	var whereOptions = {};
 
+	// Check for the 'q' query parameter.
 	if (query.hasOwnProperty('q')
 		&& query.q.trim().length > 0) {
 		whereOptions.description = {
@@ -26,6 +32,7 @@ app.get('/todos', function (req, res) {
 		};
 	}
 
+	// Check for the 'completed' query parameter.
 	if (query.hasOwnProperty('completed')) {
 		if (query.completed === 'true') {
 			whereOptions.completed = true;
@@ -34,6 +41,7 @@ app.get('/todos', function (req, res) {
 		}
 	}
 
+	// Use Sequelize to get all the todos according to any parameters passed.
 	db.todo.findAll({
 		where: whereOptions
 	}).then(function (todos) {
@@ -59,7 +67,7 @@ app.get('/todos/:id', function (req, res) {
 			res.status(404).json({ "error": "Not found" });
 		}
 	}).catch(function (e) {
-		res.status(500).send();
+		res.status(500).json({ "error": "Something went wrong: " + e.message });
 	});
 });
 
@@ -67,6 +75,7 @@ app.get('/todos/:id', function (req, res) {
 app.post('/todos', function (req, res) {
 	var body = _.pick(req.body, 'description', 'completed');
 
+	// Use Sequelize to create a Todo item in the db.
 	db.todo.create({
 		description: body.description.trim(),
 		completed: body.completed
@@ -74,7 +83,7 @@ app.post('/todos', function (req, res) {
 		// var result = _.pick(todo.toJSON(), 'description', 'completed');
 		res.json(todo.toJSON());
 	}).catch(function (e) {
-		console.log(e.message);
+		// Hmm. Seems 'e' is a json type.
 		res.status(400).json(e);
 	});
 });
@@ -83,16 +92,19 @@ app.post('/todos', function (req, res) {
 app.delete('/todos/:id', function (req, res) {
 	var todoId = parseInt(req.params.id, 10);
 
+	// Use Sequelize to delete the todo item specified by id.
 	db.todo.destroy({
 		where: {
 			id: todoId
 		}
 	}).then(function (n) {
 		if (n > 0) {
+			// => At least an item was deleted.
 			res.send(n + " items deleted.");
-		} else {
-			res.status(404).json({ "error": "No item with id " + todoId + " found." });
 			// res.status(204).send();
+		} else {
+			// Nothing deleted. No such item found.
+			res.status(404).json({ "error": "No item with id " + todoId + " found." });
 		}
 	}).catch(function (e) {
 		res.status(500).json({ "error": "Something went wrong: " + e.message });
@@ -108,6 +120,7 @@ app.put('/todos/:id', function (req, res) {
 	// 	return res.status(404).send();
 	// }
 
+	// Use underscore.js to pick only the valid properties.
 	var body = _.pick(req.body, 'description', 'completed');
 	var attributes = {};
 
@@ -116,12 +129,13 @@ app.put('/todos/:id', function (req, res) {
 	}
 
 	if (body.hasOwnProperty('description')) {
-		// good
 		attributes.description = body.description;
 	}
 
+	// Find the requested item by id first. Using Sequelize...
 	db.todo.findById(todoId).then(function (todo) {
 		if (!!todo) {
+			// ... then update the properties accordingly.
 			todo.update(attributes).then(function (todo) {
 				res.json(todo.toJSON());
 			}, function (e) {
@@ -130,8 +144,24 @@ app.put('/todos/:id', function (req, res) {
 		} else {
 			res.status(404).json({ "error": "Not found" });
 		}
-	}, function () {
-		res.status(500).send();
+	}, function (e) {
+		res.status(500).json({"error": "Something went wrong: " + e.message});
+	});
+});
+
+// POST /users
+app.post('/users', function(req, res){
+	var body = _.pick(req.body, 'email', 'password');
+
+	// Use Sequelize to create a User in the db.
+	db.user.create({
+		email: body.email.trim(),
+		password: body.password
+	}).then(function(user){
+		res.json(user.toJSON());
+	}).catch(function(e){
+		res.status(400).json({"errors": e.errors});
+		// res.status(400).json(e);
 	});
 });
 
@@ -140,4 +170,3 @@ db.sequelize.sync().then(function () {
 		console.log('Express listening on port ' + PORT + '!');
 	});
 });
-
