@@ -158,7 +158,7 @@ app.post('/users', function(req, res){
 		email: body.email.trim(),
 		password: body.password
 	}).then(function(user){
-		res.json(user.toJSON());
+		res.json(user.toPublicJSON());
 	}).catch(function(e){
 		res.status(400).json({"errors": e.errors});
 		// res.status(400).json(e);
