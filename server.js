@@ -6,6 +6,7 @@ var bodyParser = require('body-parser');
 var _ = require('underscore');
 var db = require('./db.js');
 var bcrypt = require('bcrypt');
+var middleware = require('./middleware.js')(db);
 
 var app = express();
 var PORT = process.env.PORT || 3000;
@@ -21,7 +22,7 @@ app.get('/', function (req, res) {
 
 // GET /todos
 // GET /todos/?q=<query>&completed=<true|false>
-app.get('/todos', function (req, res) {
+app.get('/todos', middleware.requireAuthentication, function (req, res) {
 	var query = req.query;
 	var whereOptions = {};
 
@@ -57,7 +58,7 @@ app.get('/todos', function (req, res) {
 });
 
 // GET /todos/:id
-app.get('/todos/:id', function (req, res) {
+app.get('/todos/:id', middleware.requireAuthentication, function (req, res) {
 	var todoId = parseInt(req.params.id, 10);
 
 	// Use sequelize to get the todo item by id.
@@ -73,7 +74,7 @@ app.get('/todos/:id', function (req, res) {
 });
 
 // POST /todos
-app.post('/todos', function (req, res) {
+app.post('/todos', middleware.requireAuthentication, function (req, res) {
 	var body = _.pick(req.body, 'description', 'completed');
 
 	// Use Sequelize to create a Todo item in the db.
@@ -90,7 +91,7 @@ app.post('/todos', function (req, res) {
 });
 
 // DELETE /todos/:id
-app.delete('/todos/:id', function (req, res) {
+app.delete('/todos/:id', middleware.requireAuthentication, function (req, res) {
 	var todoId = parseInt(req.params.id, 10);
 
 	// Use Sequelize to delete the todo item specified by id.
@@ -113,7 +114,7 @@ app.delete('/todos/:id', function (req, res) {
 });
 
 // PUT /todos/:id
-app.put('/todos/:id', function (req, res) {
+app.put('/todos/:id', middleware.requireAuthentication, function (req, res) {
 	var todoId = parseInt(req.params.id, 10);
 	// var matchedTodo = _.findWhere(todos, { id: todoId });
 
@@ -154,8 +155,8 @@ app.put('/todos/:id', function (req, res) {
 app.post('/users', function (req, res) {
 	var body = _.pick(req.body, 'email', 'password');
 
-	// Use Sequelize to create a User in the db.
-	db.user.create({
+	// Use Sequelize to create a user in the db.
+	db.UserDAO.create({
 		email: body.email.trim(),
 		password: body.password
 	}).then(function (user) {
@@ -170,9 +171,10 @@ app.post('/users', function (req, res) {
 app.post('/users/login', function (req, res) {
 	var body = _.pick(req.body, "email", "password");
 
-	db.user.authenticate(body).then(function(user){
+	db.UserDAO.authenticate(body).then(function(user){
 		var token = user.generateToken('authentication');
 		if (token) {
+			// Send the generated token back in the response headers.
 			res.header("Auth", token).json(user.toPublicJSON());
 		} else {
 			res.status(401).send();
