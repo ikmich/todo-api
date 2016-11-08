@@ -38,98 +38,98 @@ module.exports = function (sequelize, DataTypes) {
 			}
 		}
 	}, {
-			hooks: {
-				beforeValidate: function (user, options) {
-					if (typeof user.email === 'string') {
-						user.email = user.email.toLowerCase();
-					}
+		hooks: {
+			beforeValidate: function (user, options) {
+				if (typeof user.email === 'string') {
+					user.email = user.email.toLowerCase();
 				}
+			}
+		},
+
+		// Add instance methods to the model instance.
+		instanceMethods: {
+			toPublicJSON: function () {
+				var json = this.toJSON();
+				return _.pick(json, "id", "email", "createdAt", "updatedAt");
 			},
+			generateToken: function (type) {
+				console.log('Generating token...');
 
-			// Add instance methods to the model instance.
-			instanceMethods: {
-				toPublicJSON: function () {
-					var json = this.toJSON();
-					return _.pick(json, "id", "email", "createdAt", "updatedAt");
-				},
-				generateToken: function (type) {
-					console.log('Generating token...');
-
-					if (!_.isString(type)) {
-						return undefined;
-					}
-
-					try {
-						var stringData = JSON.stringify({ id: this.get('id'), type: type });
-
-						var encryptedData = cryptojs.AES.encrypt(stringData, "abc123!@#!").toString();
-
-						var token = jwt.sign({
-							token: encryptedData
-						}, 'qwerty098');
-
-						return token;
-					} catch (e) {
-						console.error(e);
-						return undefined;
-					}
+				if (!_.isString(type)) {
+					return undefined;
 				}
-			},
 
-			classMethods: {
-				authenticate: function (body) {
-					return new Promise(function (resolve, reject) {
-						if (typeof body.email !== 'string'
-							|| typeof body.password !== 'string') {
+				try {
+					var stringData = JSON.stringify({ id: this.get('id'), type: type });
+
+					var encryptedData = cryptojs.AES.encrypt(stringData, "abc123!@#!").toString();
+
+					var token = jwt.sign({
+						token: encryptedData
+					}, 'qwerty098');
+
+					return token;
+				} catch (e) {
+					console.error(e);
+					return undefined;
+				}
+			}
+		},
+
+		classMethods: {
+			authenticate: function (body) {
+				return new Promise(function (resolve, reject) {
+					if (typeof body.email !== 'string'
+						|| typeof body.password !== 'string') {
+						return reject();
+					}
+
+					User.findOne({
+						where: {
+							'email': body.email
+						}
+					}).then(function (user) {
+						if (!user || !bcrypt.compareSync(body.password, user.password_hash)) {
 							return reject();
 						}
 
-						User.findOne({
-							where: {
-								'email': body.email
-							}
-						}).then(function (user) {
-							if (!user || !bcrypt.compareSync(body.password, user.password_hash)) {
-								return reject();
-							}
+						resolve(user);
+					}, function (e) {
+						reject(e);
+					});
+				});
+			},
 
-							resolve(user);
+			findByToken: function (token) {
+				return new Promise(function (resolve, reject) {
+					try {
+						var decodedJWT = jwt.verify(token, 'qwerty098');
+
+						console.log("decodedJWT: ");
+						console.log(decodedJWT);
+
+						var bytes = cryptojs.AES.decrypt(decodedJWT.token, "abc123!@#!");
+						var tokenData = JSON.parse(bytes.toString(cryptojs.enc.Utf8));
+
+						console.log("tokenData: ");
+						console.log(tokenData);
+
+						User.findById(tokenData.id).then(function (user) {
+							if (user) {
+								resolve(user);
+							} else {
+								reject();
+							}
 						}, function (e) {
 							reject(e);
 						});
-					});
-				},
-
-				findByToken: function (token) {
-					return new Promise(function (resolve, reject) {
-						try {
-							var decodedJWT = jwt.verify(token, 'qwerty098');
-
-							console.log("decodedJWT: ");
-							console.log(decodedJWT);
-
-							var bytes = cryptojs.AES.decrypt(decodedJWT.token, "abc123!@#!");
-							var tokenData = JSON.parse(bytes.toString(cryptojs.enc.Utf8));
-
-							console.log("tokenData: ");
-							console.log(tokenData);
-
-							User.findById(tokenData.id).then(function (user) {
-								if (user) {
-									resolve(user);
-								} else {
-									reject();
-								}
-							}, function (e) {
-								reject(e);
-							});
-						} catch (e) {
-							reject(e);
-						}
-					});
-				}
+					} catch (e) {
+						reject(e);
+					}
+				});
 			}
-		});
+		}
+	});
 
 	return User;
 }
