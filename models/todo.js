@@ -2,7 +2,7 @@
  Todo model.
  */ 
 module.exports = function (sequelize, DataTypes) {
-	return sequelize.define('todo', {
+	var Todo = sequelize.define('todo', {
 		description: {
 			type: DataTypes.STRING,
 			allowNull: false,
@@ -17,4 +17,5 @@ module.exports = function (sequelize, DataTypes) {
 			defaultValue: false
 		}
 	});
+	return Todo;
 }

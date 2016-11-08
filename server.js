@@ -44,7 +44,7 @@ app.get('/todos', middleware.requireAuthentication, function (req, res) {
 	}
 
 	// Use Sequelize to get all the todos according to any parameters passed.
-	db.todo.findAll({
+	db.Todo.findAll({
 		where: whereOptions
 	}).then(function (todos) {
 		if (todos) {
@@ -62,7 +62,7 @@ app.get('/todos/:id', middleware.requireAuthentication, function (req, res) {
 	var todoId = parseInt(req.params.id, 10);
 
 	// Use sequelize to get the todo item by id.
-	db.todo.findById(todoId).then(function (todo) {
+	db.Todo.findById(todoId).then(function (todo) {
 		if (!!todo) {
 			res.json(todo.toJSON());
 		} else {
@@ -78,12 +78,15 @@ app.post('/todos', middleware.requireAuthentication, function (req, res) {
 	var body = _.pick(req.body, 'description', 'completed');
 
 	// Use Sequelize to create a Todo item in the db.
-	db.todo.create({
+	db.Todo.create({
 		description: body.description.trim(),
 		completed: body.completed
 	}).then(function (todo) {
-		// var result = _.pick(todo.toJSON(), 'description', 'completed');
-		res.json(todo.toJSON());
+		req.user.addTodo(todo).then(function(){
+			return todo.reload();
+		}).then(function(todo){
+			res.json(todo.toJSON());
+		});
 	}).catch(function (e) {
 		// Hmm. Seems 'e' is a json type.
 		res.status(400).json(e);
@@ -95,7 +98,7 @@ app.delete('/todos/:id', middleware.requireAuthentication, function (req, res) {
 	var todoId = parseInt(req.params.id, 10);
 
 	// Use Sequelize to delete the todo item specified by id.
-	db.todo.destroy({
+	db.Todo.destroy({
 		where: {
 			id: todoId
 		}
@@ -116,12 +119,7 @@ app.delete('/todos/:id', middleware.requireAuthentication, function (req, res) {
 // PUT /todos/:id
 app.put('/todos/:id', middleware.requireAuthentication, function (req, res) {
 	var todoId = parseInt(req.params.id, 10);
-	// var matchedTodo = _.findWhere(todos, { id: todoId });
-
-	// if (!matchedTodo) {
-	// 	return res.status(404).send();
-	// }
-
+	
 	// Use underscore.js to pick only the valid properties.
 	var body = _.pick(req.body, 'description', 'completed');
 	var attributes = {};
@@ -135,7 +133,7 @@ app.put('/todos/:id', middleware.requireAuthentication, function (req, res) {
 	}
 
 	// Find the requested item by id first. Using Sequelize...
-	db.todo.findById(todoId).then(function (todo) {
+	db.Todo.findById(todoId).then(function (todo) {
 		if (!!todo) {
 			// ... then update the properties accordingly.
 			todo.update(attributes).then(function (todo) {
@@ -156,7 +154,7 @@ app.post('/users', function (req, res) {
 	var body = _.pick(req.body, 'email', 'password');
 
 	// Use Sequelize to create a user in the db.
-	db.UserDAO.create({
+	db.User.create({
 		email: body.email.trim(),
 		password: body.password
 	}).then(function (user) {
@@ -171,7 +169,7 @@ app.post('/users', function (req, res) {
 app.post('/users/login', function (req, res) {
 	var body = _.pick(req.body, "email", "password");
 
-	db.UserDAO.authenticate(body).then(function(user){
+	db.User.authenticate(body).then(function(user){
 		var token = user.generateToken('authentication');
 		if (token) {
 			// Send the generated token back in the response headers.
