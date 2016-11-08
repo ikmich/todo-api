@@ -21,6 +21,10 @@ db.User = sequelize.import(__dirname + '/models/user.js');
 db.sequelize = sequelize;
 db.Sequelize = Sequelize;
 
+/*
+ * Define the associations between a Todo and a User.
+ * A Todo belongs to a User, and a User has many Todo's.
+ */
 db.Todo.belongsTo(db.User);
 db.User.hasMany(db.Todo);
 

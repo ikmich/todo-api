@@ -24,7 +24,12 @@ app.get('/', function (req, res) {
 // GET /todos/?q=<query>&completed=<true|false>
 app.get('/todos', middleware.requireAuthentication, function (req, res) {
 	var query = req.query;
-	var whereOptions = {};
+	var whereOptions = {
+		/**
+		 * Where userId is the id of the user indicated in the Auth header.
+		 */
+		'userId': req.user.id
+	};
 
 	// Check for the 'q' query parameter.
 	if (query.hasOwnProperty('q')
@@ -61,16 +66,35 @@ app.get('/todos', middleware.requireAuthentication, function (req, res) {
 app.get('/todos/:id', middleware.requireAuthentication, function (req, res) {
 	var todoId = parseInt(req.params.id, 10);
 
-	// Use sequelize to get the todo item by id.
-	db.Todo.findById(todoId).then(function (todo) {
+	/*
+	 * Use Sequelize to get the Todo object with the specified id and corresponding
+	 * to the User indicated in the Auth header.
+	 */	
+	db.Todo.findOne({
+		where: {
+			'id': todoId,
+			'userId': req.user.get('id')
+		}
+	}).then(function(todo){
 		if (!!todo) {
 			res.json(todo.toJSON());
 		} else {
 			res.status(404).json({ "error": "Not found" });
 		}
-	}).catch(function (e) {
+	}, function(e) {
 		res.status(500).json({ "error": "Something went wrong: " + e.message });
 	});
+
+	// // Use sequelize to get the todo item by id.
+	// db.Todo.findById(todoId).then(function (todo) {
+	// 	if (!!todo) {
+	// 		res.json(todo.toJSON());
+	// 	} else {
+	// 		res.status(404).json({ "error": "Not found" });
+	// 	}
+	// }).catch(function (e) {
+	// 	res.status(500).json({ "error": "Something went wrong: " + e.message });
+	// });
 });
 
 // POST /todos
@@ -82,13 +106,18 @@ app.post('/todos', middleware.requireAuthentication, function (req, res) {
 		description: body.description.trim(),
 		completed: body.completed
 	}).then(function (todo) {
+		// Handle the association between User and Todo.
 		req.user.addTodo(todo).then(function(){
+			/*
+			 * At this point, the Todo object has been updated with the User
+			 * association, so 'reload()' has to be called on it.
+			 */
 			return todo.reload();
 		}).then(function(todo){
+			// Respond with the reloaded Todo object.
 			res.json(todo.toJSON());
 		});
 	}).catch(function (e) {
-		// Hmm. Seems 'e' is a json type.
 		res.status(400).json(e);
 	});
 });
@@ -100,7 +129,8 @@ app.delete('/todos/:id', middleware.requireAuthentication, function (req, res) {
 	// Use Sequelize to delete the todo item specified by id.
 	db.Todo.destroy({
 		where: {
-			id: todoId
+			'id': todoId,
+			'userId': req.user.get('id')
 		}
 	}).then(function (n) {
 		if (n > 0) {
@@ -132,8 +162,15 @@ app.put('/todos/:id', middleware.requireAuthentication, function (req, res) {
 		attributes.description = body.description;
 	}
 
+	
+
 	// Find the requested item by id first. Using Sequelize...
-	db.Todo.findById(todoId).then(function (todo) {
+	db.Todo.findOne({
+		where: {
+			'id': todoId,
+			'userId': req.user.get('id')
+		}
+	}).then(function (todo) {
 		if (!!todo) {
 			// ... then update the properties accordingly.
 			todo.update(attributes).then(function (todo) {

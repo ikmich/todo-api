@@ -5,6 +5,7 @@ module.exports = function(db) {
 			var token = req.get('Auth');
 
 			db.User.findByToken(token).then(function(user) {
+				// Add the user to the request object.
 				req.user = user;
 				next();
 			}, function(e) {
