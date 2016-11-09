@@ -15,6 +15,10 @@ module.exports = function (sequelize, DataTypes) {
 			type: DataTypes.BOOLEAN,
 			allowNull: false,
 			defaultValue: false
+		},
+		dueDate: {
+			type: DataTypes.DATE,
+			defaultValue: Sequelize.NOW
 		}
 	});
 	return Todo;

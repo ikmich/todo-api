@@ -5,7 +5,7 @@ module.exports = function(db) {
 		requireAuthentication: function(req, res, next) {
 			var token = req.get('Auth') || "";
 
-			db.Token.findOne({
+			db.TokenDao.findOne({
 				where: {
 					'tokenHash': cryptojs.MD5(token).toString()
 				}
@@ -14,7 +14,7 @@ module.exports = function(db) {
 					throw new Error();
 				}
 
-				req.token = tokenInstance;
+				req.tokenInstance = tokenInstance;
 
 				return db.User.findByToken(token);
 			}).then(function(user){

@@ -84,17 +84,6 @@ app.get('/todos/:id', middleware.requireAuthentication, function (req, res) {
 	}, function(e) {
 		res.status(500).json({ "error": "Something went wrong: " + e.message });
 	});
-
-	// // Use sequelize to get the todo item by id.
-	// db.Todo.findById(todoId).then(function (todo) {
-	// 	if (!!todo) {
-	// 		res.json(todo.toJSON());
-	// 	} else {
-	// 		res.status(404).json({ "error": "Not found" });
-	// 	}
-	// }).catch(function (e) {
-	// 	res.status(500).json({ "error": "Something went wrong: " + e.message });
-	// });
 });
 
 // POST /todos
@@ -162,8 +151,6 @@ app.put('/todos/:id', middleware.requireAuthentication, function (req, res) {
 		attributes.description = body.description;
 	}
 
-	
-
 	// Find the requested item by id first. Using Sequelize...
 	db.Todo.findOne({
 		where: {
@@ -186,7 +173,7 @@ app.put('/todos/:id', middleware.requireAuthentication, function (req, res) {
 	});
 });
 
-// POST /users
+// POST /users/register
 app.post('/users', function (req, res) {
 	var body = _.pick(req.body, 'email', 'password');
 
@@ -211,26 +198,38 @@ app.post('/users/login', function (req, res) {
 		var token = user.generateToken('authentication');
 		userInstance = user;
 
-		return db.Token.create({
+		return db.TokenDao.create({
 			'token': token
 		});
 	}).then(function(tokenInstance){
 		res.header('Auth', tokenInstance.get('token')).json(userInstance.toPublicJSON());
 	}).catch(function(e){
-		res.status(401).send();
+		res.status(401).json({"error": e.message});
+	});
+});
+
+// POST /users/logout
+app.post('/users/logout', middleware.requireAuthentication, function(req, res){
+	req.tokenInstance.destroy().then(function(){
+		res.status(200).json({"success": "1"});
+	}).catch(function(e){
+		res.status(500).json({"error": e.message});
 	});
 });
 
 // DELETE /users/login
 app.delete('/users/login', middleware.requireAuthentication, function(req, res){
-	req.token.destroy().then(function(){
-		res.status(204).send();
+	req.tokenInstance.destroy().then(function(){
+		// res.status(204).send();
+		res.status(200).json({"success": "1"});
 	}).catch(function(e){
-		res.status(500).send();
+		res.status(500).json({"error": e.message});
 	});
 });
 
-db.sequelize.sync({force: true}).then(function () {
+db.sequelize.sync({
+	force: true
+}).then(function () {
 	app.listen(PORT, function () {
 		console.log('Express listening on port ' + PORT + '!');
 	});

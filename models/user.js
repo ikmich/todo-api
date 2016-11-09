@@ -1,6 +1,6 @@
 
-var bcrypt = require('bcrypt');
 var _ = require('underscore');
+var bcrypt = require('bcrypt');
 var cryptojs = require('crypto-js');
 var jwt = require('jsonwebtoken');
 
@@ -32,6 +32,7 @@ module.exports = function (sequelize, DataTypes) {
 				var salt = bcrypt.genSaltSync(10);
 				var hashedPassword = bcrypt.hashSync(value, salt);
 
+				// Set the model property values...
 				this.setDataValue('password', value);
 				this.setDataValue('salt', salt);
 				this.setDataValue('password_hash', hashedPassword);
@@ -53,14 +54,16 @@ module.exports = function (sequelize, DataTypes) {
 				return _.pick(json, "id", "email", "createdAt", "updatedAt");
 			},
 			generateToken: function (type) {
-				console.log('Generating token...');
-
 				if (!_.isString(type)) {
 					return undefined;
 				}
 
 				try {
-					var stringData = JSON.stringify({ id: this.get('id'), type: type });
+					var tokenData = { 
+						id: this.get('id'), 
+						type: type 
+					};
+					var stringData = JSON.stringify(tokenData);
 
 					var encryptedData = cryptojs.AES.encrypt(stringData, "abc123!@#!").toString();
 
@@ -76,6 +79,7 @@ module.exports = function (sequelize, DataTypes) {
 			}
 		},
 
+		// Add class methods to the DAO
 		classMethods: {
 			authenticate: function (body) {
 				return new Promise(function (resolve, reject) {
@@ -105,14 +109,8 @@ module.exports = function (sequelize, DataTypes) {
 					try {
 						var decodedJWT = jwt.verify(token, 'qwerty098');
 
-						console.log("decodedJWT: ");
-						console.log(decodedJWT);
-
 						var bytes = cryptojs.AES.decrypt(decodedJWT.token, "abc123!@#!");
 						var tokenData = JSON.parse(bytes.toString(cryptojs.enc.Utf8));
-
-						console.log("tokenData: ");
-						console.log(tokenData);
 
 						User.findById(tokenData.id).then(function (user) {
 							if (user) {
